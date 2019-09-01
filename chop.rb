@@ -8,15 +8,16 @@ class Chopper
 
   SUMMARY = '📱 Bereitschaft'
 
-  def initialize(url)
+  def initialize(url:, offset_months:)
     @uri = URI(url)
+    @offset_months = offset_months.to_i || 1
   end
 
   def chop!
     calendar = fetch_calendar
 
-    parsed_calendar = Icalendar::Calendar.parse(calendar)
-    fewer_events = reduce_events(parsed_calendar.first)
+    parsed_calendar = Icalendar::Calendar.parse(calendar).first
+    fewer_events = reduce_events(parsed_calendar)
 
     build_new_calendar(change_summary(fewer_events))
   end
@@ -28,8 +29,9 @@ class Chopper
   end
 
   def reduce_events(calendar)
+    requested_month = Date.today >> @offset_months
     calendar.events.reject do |event|
-      event.dtstart < beginning_of_month(Date.today >> 1) || event.dtstart > end_of_month(Date.today >> 1)
+      event.dtstart < beginning_of_month(requested_month) || event.dtstart > end_of_month(requested_month)
     end
   end
 
@@ -58,7 +60,7 @@ class Chopper
 
 end
 
-chopper = Chopper.new(ARGV[0])
+chopper = Chopper.new(url: ARGV[0], offset_months: ARGV[1])
 
 new_calendar = chopper.chop!
 
